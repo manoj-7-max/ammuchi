@@ -1,44 +1,29 @@
-import { useParams, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { ArrowLeft, Leaf, Minus, Plus, ShieldCheck, ShoppingCart } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ShoppingCart, ArrowLeft, ShieldCheck, Zap, Leaf } from 'lucide-react';
+import { api } from '../lib/api';
+import { getProductImage } from '../data/products';
 import useCartStore from '../store/cartStore';
 
 const ProductDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const addToCart = useCartStore((state) => state.addToCart);
+  const [product, setProduct] = useState(null);
   const [quantity, setQuantity] = useState(1);
+  const [activeImage, setActiveImage] = useState('');
 
-  // Mock product data (In real app, fetch from API using ID)
-  const product = {
-    _id: id,
-    name: 'Karuppu Ulundhu Health Mix',
-    tamilName: 'கருப்பு உளுந்து கஞ்சி மிக்ஸ்',
-    price: 250,
-    category: 'Health Mixes',
-    image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=80',
-    description: 'Our flagship Karuppu Ulundhu (Black Gram) Health Mix is a powerhouse of nutrition. Crafted using age-old traditional recipes, this mix combines the goodness of 20 different natural ingredients including sprouted pulses and traditional rice varieties.',
-    tamilDescription: 'மாப்பிள்ளை சம்பா, கருப்பு கவுனி, பார்லி, சீரக சம்பா போன்ற 20 வகையான தானியங்களை கொண்டு பாரம்பரிய முறையில் தயாரிக்கப்பட்டது.',
-    ingredients: [
-      'Black Gram (Karuppu Ulundhu)',
-      'Mappillai Samba Rice',
-      'Karuppu Kavuni Rice',
-      'Barley',
-      'Seeraga Samba',
-      'Green Gram',
-      'Roasted Gram',
-      'Cardamom',
-      'Dry Ginger'
-    ],
-    benefits: [
-      'High in Protein and Fiber',
-      'Strengthens bones and muscles',
-      'Natural energy booster',
-      'Easy to digest',
-      'Suitable for all ages'
-    ]
-  };
+  useEffect(() => {
+    api.getProduct(id).then((data) => {
+      setProduct(data);
+      setActiveImage(getProductImage(data));
+    });
+  }, [id]);
+
+  if (!product) return <div className="min-h-screen bg-stone-50 p-10 text-center">Loading product...</div>;
+
+  const images = product.images?.length ? product.images : [getProductImage(product)];
 
   const handleAddToCart = () => {
     addToCart(product, quantity);
@@ -46,99 +31,62 @@ const ProductDetails = () => {
   };
 
   return (
-    <div className="bg-white min-h-screen pb-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <button 
-          onClick={() => navigate(-1)}
-          className="flex items-center text-gray-500 hover:text-amuchi-green mb-8 transition-colors"
-        >
-          <ArrowLeft className="h-5 w-5 mr-2" />
-          Back to Products
+    <div className="min-h-screen bg-white py-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <button onClick={() => navigate(-1)} className="mb-8 flex items-center gap-2 font-bold text-stone-500 transition hover:text-[#315c35]">
+          <ArrowLeft className="h-5 w-5" /> Back to products
         </button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Product Image */}
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="rounded-3xl overflow-hidden shadow-2xl h-[500px]"
-          >
-            <img 
-              src={product.image} 
-              alt={product.name} 
-              className="w-full h-full object-cover"
-            />
+        <div className="grid grid-cols-1 gap-12 lg:grid-cols-2">
+          <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}>
+            <div className="overflow-hidden rounded-[2rem] border border-stone-200 bg-stone-100 shadow-xl">
+              <img src={activeImage} alt={product.name} className="aspect-[4/3] w-full object-cover" />
+            </div>
+            <div className="mt-4 grid grid-cols-4 gap-3">
+              {images.map((image) => (
+                <button key={image} onClick={() => setActiveImage(image)} className={`overflow-hidden rounded-lg border-2 ${activeImage === image ? 'border-[#315c35]' : 'border-transparent'}`}>
+                  <img src={image} alt="" className="aspect-square w-full object-cover" />
+                </button>
+              ))}
+            </div>
           </motion.div>
 
-          {/* Product Info */}
-          <div className="flex flex-col">
-            <div className="mb-6">
-              <span className="bg-amuchi-beige text-amuchi-darkbrown px-3 py-1 rounded-full text-sm font-semibold mb-4 inline-block">
-                {product.category}
-              </span>
-              <h1 className="text-4xl font-bold text-amuchi-darkbrown mb-2">{product.name}</h1>
-              <p className="text-2xl font-tamil text-amuchi-brown mb-4">{product.tamilName}</p>
-              <p className="text-3xl font-bold text-amuchi-darkgreen">₹{product.price}</p>
+          <div>
+            <span className="mb-4 inline-flex rounded-full bg-[#f6edda] px-4 py-2 text-sm font-bold text-[#315c35]">{product.category}</span>
+            <h1 className="mb-2 text-4xl font-black text-[#3b2a1f]">{product.name}</h1>
+            <p className="mb-4 font-tamil text-2xl font-bold text-[#765239]">{product.tamilName}</p>
+            <p className="mb-8 text-4xl font-black text-[#315c35]">₹{product.price}</p>
+
+            <div className="mb-8 space-y-4 text-stone-700">
+              <p className="leading-relaxed">{product.description}</p>
+              <p className="border-l-4 border-[#315c35] bg-[#fffaf0] p-4 font-tamil text-lg leading-relaxed">
+                {product.tamilDescription}
+              </p>
             </div>
 
-            <div className="space-y-6 mb-8">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">Description</h3>
-                <p className="text-gray-600 leading-relaxed mb-4">{product.description}</p>
-                <p className="text-gray-700 font-tamil leading-relaxed italic border-l-4 border-amuchi-green pl-4">
-                  "{product.tamilDescription}"
-                </p>
+            <div className="mb-8 grid gap-6 md:grid-cols-2">
+              <div className="rounded-lg border border-stone-200 p-5">
+                <h3 className="mb-4 flex items-center gap-2 font-black text-[#3b2a1f]"><ShieldCheck className="h-5 w-5 text-[#315c35]" /> Benefits</h3>
+                <ul className="space-y-2">
+                  {product.benefits?.map((benefit) => <li key={benefit} className="text-sm text-stone-600">✓ {benefit}</li>)}
+                </ul>
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                    <ShieldCheck className="h-5 w-5 text-amuchi-green" />
-                    Benefits
-                  </h3>
-                  <ul className="space-y-2">
-                    {product.benefits.map((benefit, i) => (
-                      <li key={i} className="text-sm text-gray-600 flex items-start gap-2">
-                        <span className="text-amuchi-green font-bold">•</span>
-                        {benefit}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                    <Leaf className="h-5 w-5 text-amuchi-green" />
-                    Ingredients
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {product.ingredients.map((ing, i) => (
-                      <span key={i} className="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded-full">
-                        {ing}
-                      </span>
-                    ))}
-                  </div>
+              <div className="rounded-lg border border-stone-200 p-5">
+                <h3 className="mb-4 flex items-center gap-2 font-black text-[#3b2a1f]"><Leaf className="h-5 w-5 text-[#315c35]" /> Ingredients</h3>
+                <div className="flex flex-wrap gap-2">
+                  {product.ingredients?.map((ingredient) => <span key={ingredient} className="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-700">{ingredient}</span>)}
                 </div>
               </div>
             </div>
 
-            <div className="mt-auto pt-8 border-t border-gray-100 flex items-center gap-6">
-              <div className="flex items-center border border-gray-300 rounded-xl px-4 py-2">
-                <button 
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="px-2 text-2xl text-gray-500"
-                >-</button>
-                <span className="px-6 font-bold text-lg">{quantity}</span>
-                <button 
-                  onClick={() => setQuantity(quantity + 1)}
-                  className="px-2 text-2xl text-gray-500"
-                >+</button>
+            <div className="flex flex-col gap-4 border-t border-stone-200 pt-8 sm:flex-row">
+              <div className="flex items-center justify-between rounded-lg border border-stone-300 px-4 py-3 sm:w-40">
+                <button onClick={() => setQuantity(Math.max(1, quantity - 1))}><Minus className="h-5 w-5" /></button>
+                <span className="text-lg font-black">{quantity}</span>
+                <button onClick={() => setQuantity(quantity + 1)}><Plus className="h-5 w-5" /></button>
               </div>
-              <button 
-                onClick={handleAddToCart}
-                className="flex-grow bg-amuchi-green hover:bg-amuchi-darkgreen text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-95"
-              >
-                <ShoppingCart className="h-6 w-6" />
-                Add to Cart
+              <button onClick={handleAddToCart} className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#315c35] py-4 font-black text-white shadow-lg transition hover:bg-[#254729]">
+                <ShoppingCart className="h-6 w-6" /> Add to Cart
               </button>
             </div>
           </div>

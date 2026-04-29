@@ -1,214 +1,246 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { CheckCircle2, Edit, LayoutDashboard, LogOut, Package, Plus, Save, ShoppingBag, Trash2, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Package, 
-  ShoppingBag, 
-  Users, 
-  Settings, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Search,
-  LogOut,
-  TrendingUp,
-  Clock,
-  CheckCircle2
-} from 'lucide-react';
+import { api } from '../../lib/api';
+import { categories, sampleProducts } from '../../data/products';
+
+const emptyProduct = {
+  name: '',
+  tamilName: '',
+  price: 0,
+  weight: '500g',
+  category: 'Health Mixes',
+  stock: 10,
+  image: '',
+  tamilDescription: '',
+  description: '',
+  ingredients: [],
+  benefits: []
+};
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
-  const [products, setProducts] = useState([
-    { _id: '1', name: 'Karuppu Ulundhu Mix', price: 250, category: 'Health Mixes', stock: 45 },
-    { _id: '2', name: 'Mappillai Samba Rice', price: 180, category: 'Rice', stock: 20 }
-  ]);
-  const [orders, setOrders] = useState([
-    { _id: 'ORD001', customer: 'Ravi Kumar', total: 550, status: 'Pending', date: '2026-04-28' },
-    { _id: 'ORD002', customer: 'Anitha S', total: 250, status: 'Shipped', date: '2026-04-29' }
-  ]);
+  const [analytics, setAnalytics] = useState({ totalOrders: 0, totalSales: 0, recentOrders: [] });
+  const [products, setProducts] = useState(sampleProducts);
+  const [orders, setOrders] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [editing, setEditing] = useState(emptyProduct);
+  const [message, setMessage] = useState('');
+
+  const loadAdminData = async () => {
+    try {
+      const [analyticsData, productData, orderData, customerData] = await Promise.all([
+        api.analytics(),
+        api.adminProducts(),
+        api.orders(),
+        api.customers()
+      ]);
+      setAnalytics(analyticsData);
+      setProducts(productData.length ? productData : sampleProducts);
+      setOrders(orderData);
+      setCustomers(customerData);
+    } catch {
+      setAnalytics({ totalOrders: 2, totalSales: 800, recentOrders: [] });
+      setOrders([
+        { _id: 'ORD001', customerName: 'Ravi Kumar', phone: '9999999999', totalAmount: 550, status: 'Pending', createdAt: '2026-04-28' },
+        { _id: 'ORD002', customerName: 'Anitha S', phone: '8888888888', totalAmount: 250, status: 'Shipped', createdAt: '2026-04-29' }
+      ]);
+      setCustomers([{ name: 'Ravi Kumar', phone: '9999999999', orders: 1, totalSpent: 550 }]);
+    }
+  };
 
   useEffect(() => {
-    const isAdmin = localStorage.getItem('isAdmin');
-    if (!isAdmin) navigate('/admin');
+    if (!localStorage.getItem('isAdmin')) {
+      navigate('/admin');
+      return undefined;
+    }
+    const timer = window.setTimeout(() => {
+      loadAdminData();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [navigate]);
 
-  const handleLogout = () => {
+  const stats = useMemo(() => [
+    { label: 'Total Sales', value: `₹${analytics.totalSales || 0}`, icon: CheckCircle2 },
+    { label: 'Orders', value: analytics.totalOrders || orders.length, icon: ShoppingBag },
+    { label: 'Products', value: products.length, icon: Package },
+    { label: 'Customers', value: customers.length, icon: Users }
+  ], [analytics, orders.length, products.length, customers.length]);
+
+  const logout = () => {
+    localStorage.removeItem('adminToken');
     localStorage.removeItem('isAdmin');
     navigate('/admin');
   };
 
-  return (
-    <div className="flex min-h-screen bg-gray-100">
-      {/* Sidebar */}
-      <aside className="w-64 bg-amuchi-darkbrown text-amuchi-beige hidden md:flex flex-col">
-        <div className="p-8">
-          <h1 className="text-xl font-bold font-tamil text-white">அமுச்சி Admin</h1>
-        </div>
-        
-        <nav className="flex-grow px-4 space-y-2">
-          <button 
-            onClick={() => setActiveTab('overview')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'overview' ? 'bg-amuchi-green text-white shadow-lg' : 'hover:bg-white/5'}`}
-          >
-            <LayoutDashboard className="h-5 w-5" /> Overview
-          </button>
-          <button 
-            onClick={() => setActiveTab('products')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'products' ? 'bg-amuchi-green text-white shadow-lg' : 'hover:bg-white/5'}`}
-          >
-            <Package className="h-5 w-5" /> Products
-          </button>
-          <button 
-            onClick={() => setActiveTab('orders')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'orders' ? 'bg-amuchi-green text-white shadow-lg' : 'hover:bg-white/5'}`}
-          >
-            <ShoppingBag className="h-5 w-5" /> Orders
-          </button>
-          <button 
-            onClick={() => setActiveTab('customers')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'customers' ? 'bg-amuchi-green text-white shadow-lg' : 'hover:bg-white/5'}`}
-          >
-            <Users className="h-5 w-5" /> Customers
-          </button>
-        </nav>
+  const saveProduct = async (event) => {
+    event.preventDefault();
+    const payload = {
+      ...editing,
+      images: editing.image ? [editing.image] : [],
+      ingredients: Array.isArray(editing.ingredients) ? editing.ingredients : String(editing.ingredients).split(',').map((item) => item.trim()).filter(Boolean),
+      benefits: Array.isArray(editing.benefits) ? editing.benefits : String(editing.benefits).split(',').map((item) => item.trim()).filter(Boolean)
+    };
+    try {
+      await api.saveProduct(payload);
+      setMessage('Product saved');
+      setEditing(emptyProduct);
+      loadAdminData();
+    } catch {
+      setProducts((current) => editing._id ? current.map((item) => item._id === editing._id ? { ...payload, _id: editing._id } : item) : [...current, { ...payload, _id: Date.now().toString() }]);
+      setEditing(emptyProduct);
+      setMessage('Product saved locally');
+    }
+  };
 
-        <div className="p-6 border-t border-white/10">
-          <button 
-            onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-2 text-red-400 hover:text-red-300 transition-colors w-full"
-          >
+  const deleteProduct = async (id) => {
+    try {
+      await api.deleteProduct(id);
+      loadAdminData();
+    } catch {
+      setProducts((current) => current.filter((product) => product._id !== id));
+    }
+  };
+
+  const updateStatus = async (id, status) => {
+    try {
+      await api.updateOrderStatus(id, status);
+      loadAdminData();
+    } catch {
+      setOrders((current) => current.map((order) => order._id === id ? { ...order, status } : order));
+    }
+  };
+
+  const tabs = [
+    ['overview', LayoutDashboard, 'Overview'],
+    ['products', Package, 'Products'],
+    ['orders', ShoppingBag, 'Orders'],
+    ['customers', Users, 'Customers']
+  ];
+
+  return (
+    <div className="min-h-screen bg-stone-100 md:flex">
+      <aside className="bg-[#3b2a1f] p-4 text-[#f4dfad] md:min-h-screen md:w-64">
+        <h1 className="mb-8 px-3 text-xl font-black text-white">AMUCHI Admin</h1>
+        <nav className="grid gap-2">
+          {tabs.map(([id, Icon, label]) => (
+            <button key={id} onClick={() => setActiveTab(id)} className={`flex items-center gap-3 rounded-lg px-4 py-3 text-left font-bold ${activeTab === id ? 'bg-[#315c35] text-white' : 'hover:bg-white/10'}`}>
+              <Icon className="h-5 w-5" /> {label}
+            </button>
+          ))}
+          <button onClick={logout} className="mt-4 flex items-center gap-3 rounded-lg px-4 py-3 text-left font-bold text-red-200 hover:bg-white/10">
             <LogOut className="h-5 w-5" /> Logout
           </button>
-        </div>
+        </nav>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-grow overflow-y-auto">
-        <header className="bg-white h-20 shadow-sm flex items-center justify-between px-8 sticky top-0 z-10">
-          <h2 className="text-xl font-bold text-gray-800 capitalize">{activeTab}</h2>
-          <div className="flex items-center gap-4">
-            <div className="relative hidden sm:block">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <input type="text" placeholder="Global search..." className="bg-gray-50 border border-gray-100 rounded-full pl-10 pr-4 py-2 text-sm outline-none focus:ring-2 focus:ring-amuchi-green" />
-            </div>
-            <div className="w-10 h-10 bg-amuchi-green rounded-full flex items-center justify-center text-white font-bold">A</div>
+      <main className="flex-1 p-5 md:p-8">
+        <div className="mb-8 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+          <div>
+            <p className="font-bold uppercase tracking-[0.2em] text-[#315c35]">Dashboard</p>
+            <h2 className="text-3xl font-black capitalize text-[#3b2a1f]">{activeTab}</h2>
           </div>
-        </header>
-
-        <div className="p-8">
-          {activeTab === 'overview' && (
-            <div className="space-y-8">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[
-                  { label: 'Total Sales', value: '₹45,200', icon: <TrendingUp />, color: 'bg-green-500' },
-                  { label: 'Total Orders', value: '124', icon: <ShoppingBag />, color: 'bg-blue-500' },
-                  { label: 'Products', value: '18', icon: <Package />, color: 'bg-purple-500' },
-                  { label: 'New Customers', value: '32', icon: <Users />, color: 'bg-orange-500' }
-                ].map((stat, i) => (
-                  <div key={i} className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-6">
-                    <div className={`${stat.color} p-4 rounded-2xl text-white shadow-lg`}>{stat.icon}</div>
-                    <div>
-                      <p className="text-gray-400 text-sm font-medium">{stat.label}</p>
-                      <h3 className="text-2xl font-bold text-gray-800">{stat.value}</h3>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
-                  <h3 className="text-lg font-bold mb-6">Recent Orders</h3>
-                  <div className="space-y-4">
-                    {orders.map(order => (
-                      <div key={order._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center border border-gray-200">
-                            <Clock className="h-5 w-5 text-gray-400" />
-                          </div>
-                          <div>
-                            <p className="font-bold text-gray-800">{order.customer}</p>
-                            <p className="text-xs text-gray-400">{order._id} • {order.date}</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold text-amuchi-darkgreen">₹{order.total}</p>
-                          <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded-full ${order.status === 'Pending' ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'}`}>
-                            {order.status}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                
-                <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
-                  <h3 className="text-lg font-bold mb-6">Store Performance</h3>
-                  <div className="flex flex-col items-center justify-center h-48 text-gray-400">
-                    <TrendingUp className="h-12 w-12 mb-4 opacity-20" />
-                    <p className="text-sm">Real-time charts will appear here</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'products' && (
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="p-6 border-b border-gray-50 flex justify-between items-center">
-                <h3 className="font-bold text-gray-800">Product Management</h3>
-                <button className="bg-amuchi-green text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-amuchi-darkgreen transition-all shadow-md">
-                  <Plus className="h-4 w-4" /> Add Product
-                </button>
-              </div>
-              <table className="w-full text-left border-collapse">
-                <thead className="bg-gray-50 text-gray-400 text-xs uppercase tracking-widest">
-                  <tr>
-                    <th className="px-6 py-4 font-semibold">Product</th>
-                    <th className="px-6 py-4 font-semibold">Category</th>
-                    <th className="px-6 py-4 font-semibold">Price</th>
-                    <th className="px-6 py-4 font-semibold">Stock</th>
-                    <th className="px-6 py-4 font-semibold">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {products.map(p => (
-                    <tr key={p._id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 font-bold text-gray-800">{p.name}</td>
-                      <td className="px-6 py-4"><span className="bg-gray-100 px-2 py-1 rounded text-xs">{p.category}</span></td>
-                      <td className="px-6 py-4 text-amuchi-darkgreen font-semibold">₹{p.price}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${p.stock < 25 ? 'bg-red-500' : 'bg-green-500'}`}></div>
-                          {p.stock}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <button className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg"><Edit className="h-4 w-4" /></button>
-                          <button className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 className="h-4 w-4" /></button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {(activeTab === 'orders' || activeTab === 'customers') && (
-            <div className="bg-white p-20 rounded-3xl shadow-sm border border-gray-100 text-center flex flex-col items-center">
-               <div className="bg-gray-50 p-6 rounded-full mb-6">
-                 <Settings className="h-12 w-12 text-gray-300 animate-spin-slow" />
-               </div>
-               <h3 className="text-xl font-bold text-gray-800">Advanced Management</h3>
-               <p className="text-gray-500 mt-2">This feature is being connected to the MongoDB backend.</p>
-            </div>
-          )}
+          {message && <span className="rounded-full bg-green-100 px-4 py-2 text-sm font-bold text-green-700">{message}</span>}
         </div>
+
+        {activeTab === 'overview' && (
+          <div className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {stats.map(({ label, value, icon: Icon }) => (
+                <div key={label} className="rounded-lg bg-white p-5 shadow-sm">
+                  <Icon className="mb-4 h-8 w-8 text-[#315c35]" />
+                  <p className="text-sm font-bold text-stone-500">{label}</p>
+                  <p className="text-3xl font-black text-[#3b2a1f]">{value}</p>
+                </div>
+              ))}
+            </div>
+            <div className="rounded-lg bg-white p-6 shadow-sm">
+              <h3 className="mb-4 text-xl font-black text-[#3b2a1f]">Recent Orders</h3>
+              <OrderTable orders={orders.slice(0, 5)} updateStatus={updateStatus} />
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'products' && (
+          <div className="grid gap-6 xl:grid-cols-[420px_1fr]">
+            <form onSubmit={saveProduct} className="h-fit rounded-lg bg-white p-5 shadow-sm">
+              <h3 className="mb-4 flex items-center gap-2 text-xl font-black text-[#3b2a1f]"><Plus /> {editing._id ? 'Edit Product' : 'Add Product'}</h3>
+              <div className="grid gap-3">
+                <input required value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} placeholder="Product name" className="rounded-lg border p-3" />
+                <input value={editing.tamilName} onChange={(e) => setEditing({ ...editing, tamilName: e.target.value })} placeholder="Tamil name" className="rounded-lg border p-3 font-tamil" />
+                <div className="grid grid-cols-2 gap-3">
+                  <input required type="number" value={editing.price} onChange={(e) => setEditing({ ...editing, price: Number(e.target.value) })} placeholder="Price" className="rounded-lg border p-3" />
+                  <input value={editing.weight} onChange={(e) => setEditing({ ...editing, weight: e.target.value })} placeholder="Weight" className="rounded-lg border p-3" />
+                </div>
+                <select value={editing.category} onChange={(e) => setEditing({ ...editing, category: e.target.value })} className="rounded-lg border p-3">
+                  {categories.filter((category) => category !== 'All').map((category) => <option key={category}>{category}</option>)}
+                </select>
+                <input value={editing.image} onChange={(e) => setEditing({ ...editing, image: e.target.value })} placeholder="Image URL" className="rounded-lg border p-3" />
+                <textarea value={editing.description} onChange={(e) => setEditing({ ...editing, description: e.target.value })} placeholder="English description" className="h-24 rounded-lg border p-3" />
+                <textarea value={editing.tamilDescription} onChange={(e) => setEditing({ ...editing, tamilDescription: e.target.value })} placeholder="Tamil description" className="h-24 rounded-lg border p-3 font-tamil" />
+                <input value={Array.isArray(editing.ingredients) ? editing.ingredients.join(', ') : editing.ingredients} onChange={(e) => setEditing({ ...editing, ingredients: e.target.value })} placeholder="Ingredients, comma separated" className="rounded-lg border p-3" />
+                <input value={Array.isArray(editing.benefits) ? editing.benefits.join(', ') : editing.benefits} onChange={(e) => setEditing({ ...editing, benefits: e.target.value })} placeholder="Benefits, comma separated" className="rounded-lg border p-3" />
+                <button className="flex items-center justify-center gap-2 rounded-lg bg-[#315c35] py-3 font-black text-white"><Save className="h-5 w-5" /> Save Product</button>
+              </div>
+            </form>
+            <div className="overflow-hidden rounded-lg bg-white shadow-sm">
+              <ProductTable products={products} edit={setEditing} remove={deleteProduct} />
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'orders' && <div className="rounded-lg bg-white p-5 shadow-sm"><OrderTable orders={orders} updateStatus={updateStatus} /></div>}
+
+        {activeTab === 'customers' && (
+          <div className="overflow-hidden rounded-lg bg-white shadow-sm">
+            <table className="w-full min-w-[620px] text-left">
+              <thead className="bg-stone-50 text-xs uppercase tracking-widest text-stone-500"><tr><th className="p-4">Name</th><th className="p-4">Phone</th><th className="p-4">Orders</th><th className="p-4">Total Spent</th></tr></thead>
+              <tbody>{customers.map((customer) => <tr key={customer.phone} className="border-t"><td className="p-4 font-bold">{customer.name}</td><td className="p-4">{customer.phone}</td><td className="p-4">{customer.orders}</td><td className="p-4 font-bold text-[#315c35]">₹{customer.totalSpent}</td></tr>)}</tbody>
+            </table>
+          </div>
+        )}
       </main>
     </div>
   );
 };
+
+const ProductTable = ({ products, edit, remove }) => (
+  <div className="overflow-x-auto">
+    <table className="w-full min-w-[760px] text-left">
+      <thead className="bg-stone-50 text-xs uppercase tracking-widest text-stone-500"><tr><th className="p-4">Product</th><th className="p-4">Category</th><th className="p-4">Price</th><th className="p-4">Stock</th><th className="p-4">Actions</th></tr></thead>
+      <tbody>
+        {products.map((product) => (
+          <tr key={product._id} className="border-t">
+            <td className="p-4"><p className="font-black text-[#3b2a1f]">{product.name}</p><p className="font-tamil text-sm text-stone-500">{product.tamilName}</p></td>
+            <td className="p-4">{product.category}</td>
+            <td className="p-4 font-bold text-[#315c35]">₹{product.price}</td>
+            <td className="p-4">{product.stock || 0}</td>
+            <td className="p-4"><button onClick={() => edit(product)} className="mr-2 rounded-lg bg-blue-50 p-2 text-blue-600"><Edit className="h-4 w-4" /></button><button onClick={() => remove(product._id)} className="rounded-lg bg-red-50 p-2 text-red-600"><Trash2 className="h-4 w-4" /></button></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+);
+
+const OrderTable = ({ orders, updateStatus }) => (
+  <div className="overflow-x-auto">
+    <table className="w-full min-w-[760px] text-left">
+      <thead className="bg-stone-50 text-xs uppercase tracking-widest text-stone-500"><tr><th className="p-4">Customer</th><th className="p-4">Phone</th><th className="p-4">Total</th><th className="p-4">Status</th><th className="p-4">Date</th></tr></thead>
+      <tbody>
+        {orders.map((order) => (
+          <tr key={order._id} className="border-t">
+            <td className="p-4 font-bold">{order.customerName || order.customer}</td>
+            <td className="p-4">{order.phone || '-'}</td>
+            <td className="p-4 font-bold text-[#315c35]">₹{order.totalAmount || order.total}</td>
+            <td className="p-4"><select value={order.status} onChange={(e) => updateStatus(order._id, e.target.value)} className="rounded-lg border p-2"><option>Pending</option><option>Shipped</option><option>Delivered</option></select></td>
+            <td className="p-4">{order.createdAt ? new Date(order.createdAt).toLocaleDateString() : order.date}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+);
 
 export default AdminDashboard;

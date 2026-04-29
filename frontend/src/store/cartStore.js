@@ -1,7 +1,9 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
-const useCartStore = create((set) => ({
+const useCartStore = create(persist((set, get) => ({
   cartItems: [],
+  wishlist: [],
   addToCart: (product, quantity = 1) => set((state) => {
     const existingItem = state.cartItems.find(item => item.product._id === product._id);
     if (existingItem) {
@@ -20,15 +22,16 @@ const useCartStore = create((set) => ({
   })),
   updateQuantity: (productId, quantity) => set((state) => ({
     cartItems: state.cartItems.map(item =>
-      item.product._id === productId ? { ...item, quantity } : item
-    )
+      item.product._id === productId ? { ...item, quantity: Math.max(1, quantity) } : item
+    ).filter(item => item.quantity > 0)
   })),
   clearCart: () => set({ cartItems: [] }),
-  getCartTotal: () => {
-    let total = 0;
-    // We can't access state directly in a getter like this cleanly in zustand without get(), so we just use a helper function in component.
-    return total;
-  }
-}));
+  toggleWishlist: (product) => set((state) => {
+    const exists = state.wishlist.some(item => item._id === product._id);
+    return { wishlist: exists ? state.wishlist.filter(item => item._id !== product._id) : [...state.wishlist, product] };
+  }),
+  isWishlisted: (productId) => get().wishlist.some(item => item._id === productId),
+  getCartTotal: () => get().cartItems.reduce((total, item) => total + item.product.price * item.quantity, 0)
+}), { name: 'amuchi-cart' }));
 
 export default useCartStore;

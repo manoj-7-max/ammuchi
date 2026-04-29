@@ -11,6 +11,15 @@ const adminAuth = (req, res, next) => {
   next();
 };
 
+router.get('/products', auth, adminAuth, async (req, res) => {
+  try {
+    const products = await Product.find().sort({ createdAt: -1 });
+    res.json(products);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Add product
 router.post('/products', auth, adminAuth, async (req, res) => {
   try {
@@ -45,7 +54,7 @@ router.delete('/products/:id', auth, adminAuth, async (req, res) => {
 // Get all orders
 router.get('/orders', auth, adminAuth, async (req, res) => {
   try {
-    const orders = await Order.find().populate('products.product').sort({ createdAt: -1 });
+    const orders = await Order.find().sort({ createdAt: -1 });
     res.json(orders);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
@@ -68,13 +77,29 @@ router.get('/analytics', auth, adminAuth, async (req, res) => {
   try {
     const totalOrders = await Order.countDocuments();
     const totalSales = await Order.aggregate([{ $group: { _id: null, total: { $sum: '$totalAmount' } } }]);
-    const recentOrders = await Order.find().sort({ createdAt: -1 }).limit(5).populate('products.product');
+    const recentOrders = await Order.find().sort({ createdAt: -1 }).limit(5);
 
     res.json({
       totalOrders,
       totalSales: totalSales.length > 0 ? totalSales[0].total : 0,
       recentOrders
     });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.get('/customers', auth, adminAuth, async (req, res) => {
+  try {
+    const orders = await Order.find().sort({ createdAt: -1 });
+    const customers = Object.values(orders.reduce((acc, order) => {
+      const key = order.phone;
+      if (!acc[key]) acc[key] = { name: order.customerName, phone: order.phone, orders: 0, totalSpent: 0 };
+      acc[key].orders += 1;
+      acc[key].totalSpent += order.totalAmount;
+      return acc;
+    }, {}));
+    res.json(customers);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
   }

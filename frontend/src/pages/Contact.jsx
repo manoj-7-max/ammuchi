@@ -1,103 +1,43 @@
+import { Award, MapPin, Phone, Send } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Phone, Mail, MapPin, Award, Send } from 'lucide-react';
 
 const Contact = () => {
   return (
-    <div className="bg-gray-50 min-h-screen py-20 px-4">
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-16">
-          <h1 className="text-4xl font-bold text-amuchi-darkbrown mb-4">Contact Us</h1>
-          <p className="text-gray-500">We'd love to hear from you. Reach out for bulk orders or questions.</p>
+    <div className="min-h-screen bg-stone-50 px-4 py-14">
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-12 text-center">
+          <p className="mb-2 font-bold uppercase tracking-[0.2em] text-[#315c35]">Talk to us</p>
+          <h1 className="text-4xl font-black text-[#3b2a1f]">Contact AMUCHI ORGANIC</h1>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 max-w-6xl mx-auto">
-          {/* Info Cards */}
-          <div className="space-y-6">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100"
-            >
-              <div className="flex items-center gap-4 mb-4">
-                <div className="bg-amuchi-beige p-3 rounded-2xl">
-                  <Phone className="h-6 w-6 text-amuchi-green" />
+        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 lg:grid-cols-3">
+          <div className="space-y-5">
+            {[
+              { icon: Phone, title: 'Phone', text: '9655493675 / 9047484721', hint: 'Available 9am - 8pm' },
+              { icon: Award, title: 'FSSAI No.', text: '22425296000143', hint: 'Food safety registration' },
+              { icon: MapPin, title: 'Location', text: 'Tamil Nadu, India', hint: 'Local and online orders' }
+            ].map(({ icon: Icon, title, text, hint }) => (
+              <motion.div key={title} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="rounded-lg border border-stone-200 bg-white p-6 shadow-sm">
+                <div className="mb-4 flex items-center gap-4">
+                  <span className="rounded-lg bg-[#f6edda] p-3 text-[#315c35]"><Icon className="h-6 w-6" /></span>
+                  <div>
+                    <h3 className="font-black text-[#3b2a1f]">{title}</h3>
+                    <p className="text-sm text-stone-500">{hint}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-amuchi-darkbrown">Phone</h3>
-                  <p className="text-sm text-gray-500">Available 9am - 8pm</p>
-                </div>
-              </div>
-              <p className="text-lg font-semibold text-amuchi-darkgreen">9655493675</p>
-              <p className="text-lg font-semibold text-amuchi-darkgreen">9047484721</p>
-            </motion.div>
-
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100"
-            >
-              <div className="flex items-center gap-4 mb-4">
-                <div className="bg-amuchi-beige p-3 rounded-2xl">
-                  <Award className="h-6 w-6 text-amuchi-green" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-amuchi-darkbrown">FSSAI No.</h3>
-                  <p className="text-sm text-gray-500">Food Safety Certified</p>
-                </div>
-              </div>
-              <p className="text-lg font-semibold text-amuchi-darkgreen">22425296000143</p>
-            </motion.div>
-
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100"
-            >
-              <div className="flex items-center gap-4 mb-4">
-                <div className="bg-amuchi-beige p-3 rounded-2xl">
-                  <MapPin className="h-6 w-6 text-amuchi-green" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-amuchi-darkbrown">Location</h3>
-                  <p className="text-sm text-gray-500">Based in Tamil Nadu</p>
-                </div>
-              </div>
-              <p className="text-gray-600 leading-relaxed">
-                Traditional Kitchen, <br />
-                Village Inspired Organic Hub, <br />
-                Tamil Nadu, India.
-              </p>
-            </motion.div>
+                <p className="font-bold text-[#315c35]">{text}</p>
+              </motion.div>
+            ))}
           </div>
 
-          {/* Contact Form */}
-          <motion.div 
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="lg:col-span-2 bg-white p-10 rounded-3xl shadow-xl border border-gray-50"
-          >
-            <h2 className="text-2xl font-bold text-amuchi-darkbrown mb-8">Send us a Message</h2>
-            <form className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-gray-600 ml-2">Name</label>
-                <input type="text" className="bg-gray-50 p-4 rounded-xl border border-transparent focus:bg-white focus:border-amuchi-green outline-none transition-all" placeholder="Enter your name" />
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-gray-600 ml-2">Phone</label>
-                <input type="tel" className="bg-gray-50 p-4 rounded-xl border border-transparent focus:bg-white focus:border-amuchi-green outline-none transition-all" placeholder="Enter phone number" />
-              </div>
-              <div className="flex flex-col gap-2 md:col-span-2">
-                <label className="text-sm font-semibold text-gray-600 ml-2">Message</label>
-                <textarea className="bg-gray-50 p-4 rounded-xl border border-transparent focus:bg-white focus:border-amuchi-green outline-none transition-all h-40" placeholder="How can we help you?"></textarea>
-              </div>
-              <button 
-                type="button"
-                className="md:col-span-2 bg-amuchi-green text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg hover:bg-amuchi-darkgreen transition-all"
-              >
-                <Send className="h-5 w-5" />
-                Send Message
+          <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} className="rounded-lg border border-stone-200 bg-white p-6 shadow-lg lg:col-span-2">
+            <h2 className="mb-6 text-2xl font-black text-[#3b2a1f]">Send a message</h2>
+            <form className="grid grid-cols-1 gap-4 md:grid-cols-2" onSubmit={(event) => event.preventDefault()}>
+              <input required placeholder="Name" className="rounded-lg border border-stone-200 p-4 outline-none focus:border-[#315c35]" />
+              <input required placeholder="Phone" className="rounded-lg border border-stone-200 p-4 outline-none focus:border-[#315c35]" />
+              <textarea required placeholder="Message" className="h-36 rounded-lg border border-stone-200 p-4 outline-none focus:border-[#315c35] md:col-span-2" />
+              <button className="flex items-center justify-center gap-2 rounded-lg bg-[#315c35] py-4 font-black text-white md:col-span-2">
+                <Send className="h-5 w-5" /> Send Message
               </button>
             </form>
           </motion.div>

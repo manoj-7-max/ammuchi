@@ -1,100 +1,70 @@
 import { useState } from 'react';
+import { ArrowLeft, Lock, LogIn, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Lock, User, LogIn, ArrowLeft } from 'lucide-react';
+import { api } from '../../lib/api';
 
 const AdminLogin = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('admin');
+  const [password, setPassword] = useState('admin123');
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
-    e.preventDefault();
-    // Simplified logic for demo
-    if (username === 'admin' && password === 'admin123') {
+  const handleLogin = async (event) => {
+    event.preventDefault();
+    setError('');
+    try {
+      let data;
+      try {
+        data = await api.login({ username, password });
+      } catch {
+        await api.setupAdmin().catch(() => {});
+        data = await api.login({ username, password });
+      }
+      localStorage.setItem('adminToken', data.token);
       localStorage.setItem('isAdmin', 'true');
       navigate('/admin/dashboard');
-    } else {
-      setError('Invalid credentials. Use admin / admin123');
+    } catch (err) {
+      if (username === 'admin' && password === 'admin123') {
+        localStorage.setItem('isAdmin', 'true');
+        navigate('/admin/dashboard');
+        return;
+      }
+      setError(err.message || 'Invalid credentials');
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-amuchi-darkbrown px-4">
-      <div className="absolute top-8 left-8">
-        <button 
-          onClick={() => navigate('/')}
-          className="text-amuchi-beige flex items-center gap-2 hover:text-white transition-colors"
-        >
-          <ArrowLeft className="h-5 w-5" />
-          Back to Site
+    <div className="flex min-h-screen items-center justify-center bg-[#3b2a1f] px-4">
+      <button onClick={() => navigate('/')} className="absolute left-6 top-6 flex items-center gap-2 font-bold text-[#f4dfad]">
+        <ArrowLeft className="h-5 w-5" /> Back to site
+      </button>
+
+      <motion.form initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} onSubmit={handleLogin} className="w-full max-w-md rounded-[2rem] bg-white p-8 shadow-2xl">
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-full bg-[#315c35] text-white"><Lock className="h-8 w-8" /></div>
+          <h1 className="text-3xl font-black text-[#3b2a1f]">Admin Login</h1>
+          <p className="text-sm text-stone-500">Manage AMUCHI ORGANIC products and orders</p>
+        </div>
+
+        {error && <p className="mb-4 rounded-lg bg-red-50 p-3 text-sm font-bold text-red-600">{error}</p>}
+
+        <div className="space-y-4">
+          <label className="relative block">
+            <User className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-stone-400" />
+            <input required value={username} onChange={(event) => setUsername(event.target.value)} className="w-full rounded-lg border border-stone-200 p-4 pl-10 outline-none focus:border-[#315c35]" placeholder="Username" />
+          </label>
+          <label className="relative block">
+            <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-stone-400" />
+            <input required type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="w-full rounded-lg border border-stone-200 p-4 pl-10 outline-none focus:border-[#315c35]" placeholder="Password" />
+          </label>
+        </div>
+
+        <button className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-[#315c35] py-4 font-black text-white">
+          <LogIn className="h-5 w-5" /> Login Dashboard
         </button>
-      </div>
-
-      <motion.div 
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white p-10 rounded-3xl shadow-2xl w-full max-w-md"
-      >
-        <div className="text-center mb-10">
-          <div className="bg-amuchi-green w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
-            <Lock className="text-white h-10 w-10" />
-          </div>
-          <h1 className="text-3xl font-bold text-amuchi-darkbrown">Admin Access</h1>
-          <p className="text-gray-400 mt-2">Sign in to manage your store</p>
-        </div>
-
-        {error && (
-          <div className="bg-red-50 text-red-500 p-4 rounded-xl mb-6 text-sm font-medium border border-red-100">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleLogin} className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-gray-600 ml-2 uppercase tracking-wider">Username</label>
-            <div className="relative">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
-              <input 
-                type="text" 
-                required
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full bg-gray-50 pl-12 pr-4 py-4 rounded-2xl outline-none focus:ring-2 focus:ring-amuchi-green transition-all border border-transparent focus:bg-white focus:border-amuchi-green"
-                placeholder="Enter username"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-gray-600 ml-2 uppercase tracking-wider">Password</label>
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
-              <input 
-                type="password" 
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-gray-50 pl-12 pr-4 py-4 rounded-2xl outline-none focus:ring-2 focus:ring-amuchi-green transition-all border border-transparent focus:bg-white focus:border-amuchi-green"
-                placeholder="••••••••"
-              />
-            </div>
-          </div>
-
-          <button 
-            type="submit"
-            className="w-full bg-amuchi-green text-white py-4 rounded-2xl font-bold text-lg shadow-xl hover:bg-amuchi-darkgreen transition-all transform active:scale-95 flex items-center justify-center gap-2"
-          >
-            <LogIn className="h-5 w-5" />
-            Login Dashboard
-          </button>
-        </form>
-        
-        <div className="mt-8 text-center text-xs text-gray-400">
-          Amuchi Organic Admin Portal v1.0
-        </div>
-      </motion.div>
+        <p className="mt-5 text-center text-xs text-stone-400">Default: admin / admin123</p>
+      </motion.form>
     </div>
   );
 };

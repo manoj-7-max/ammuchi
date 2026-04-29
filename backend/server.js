@@ -2,6 +2,10 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const bcrypt = require('bcryptjs');
+const User = require('./models/User');
+const Product = require('./models/Product');
+const seedProducts = require('./data/seedProducts');
 
 const app = express();
 app.use(cors());
@@ -23,9 +27,23 @@ app.get('/', (req, res) => res.send('Amuchi API Running'));
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/amuchi';
 
+const seedStore = async () => {
+  const adminExists = await User.findOne({ username: process.env.ADMIN_USERNAME || 'admin' });
+  if (!adminExists) {
+    const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'admin123', 10);
+    await User.create({ username: process.env.ADMIN_USERNAME || 'admin', password: hashedPassword, isAdmin: true });
+  }
+
+  const productCount = await Product.countDocuments();
+  if (productCount === 0) {
+    await Product.insertMany(seedProducts);
+  }
+};
+
 mongoose.connect(MONGO_URI)
-  .then(() => {
+  .then(async () => {
     console.log('Connected to MongoDB');
+    await seedStore();
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
   })
   .catch((err) => console.error(err));

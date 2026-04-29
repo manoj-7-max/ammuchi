@@ -1,52 +1,81 @@
-import { Outlet, Link } from 'react-router-dom';
-import { ShoppingCart, Menu, X } from 'lucide-react';
 import { useState } from 'react';
+import { Heart, Menu, Phone, ShoppingCart, X } from 'lucide-react';
+import { Link, NavLink, Outlet } from 'react-router-dom';
 import useCartStore from '../store/cartStore';
+
+const navItems = [
+  ['/', 'Home'],
+  ['/products', 'Products'],
+  ['/about', 'About'],
+  ['/contact', 'Contact']
+];
 
 const Layout = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const cartItems = useCartStore((state) => state.cartItems);
+  const wishlist = useCartStore((state) => state.wishlist);
   const cartItemCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <header className="bg-amuchi-green text-white shadow-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <Link to="/" className="text-2xl font-bold font-tamil tracking-wide">
-              அமுச்சி Organic
+    <div className="flex min-h-screen flex-col bg-stone-50 text-stone-900">
+      <header className="sticky top-0 z-50 border-b border-white/40 bg-[#315c35]/95 text-white shadow-sm backdrop-blur">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 items-center justify-between">
+            <Link to="/" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3">
+              <span className="grid h-10 w-10 place-items-center rounded-full bg-[#f4dfad] text-lg font-black text-[#315c35]">A</span>
+              <span>
+                <span className="block text-lg font-black tracking-wide">AMUCHI ORGANIC</span>
+                <span className="block font-tamil text-[11px] text-[#f4dfad]">அமுச்சி ஆர்கானிக்</span>
+              </span>
             </Link>
-            
-            <nav className="hidden md:flex space-x-8">
-              <Link to="/" className="hover:text-amuchi-beige transition-colors">Home</Link>
-              <Link to="/products" className="hover:text-amuchi-beige transition-colors">Products</Link>
-              <Link to="/about" className="hover:text-amuchi-beige transition-colors">About</Link>
-              <Link to="/contact" className="hover:text-amuchi-beige transition-colors">Contact</Link>
+
+            <nav className="hidden items-center gap-1 md:flex">
+              {navItems.map(([to, label]) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  className={({ isActive }) =>
+                    `rounded-full px-4 py-2 text-sm font-semibold transition ${isActive ? 'bg-white text-[#315c35]' : 'text-white/85 hover:bg-white/10 hover:text-white'}`
+                  }
+                >
+                  {label}
+                </NavLink>
+              ))}
             </nav>
 
-            <div className="flex items-center space-x-4">
-              <Link to="/cart" className="relative">
+            <div className="flex items-center gap-3">
+              <a href="https://wa.me/919655493675" className="hidden rounded-full bg-[#f4dfad] px-4 py-2 text-sm font-bold text-[#315c35] sm:inline-flex">
+                WhatsApp Order
+              </a>
+              <Link to="/products" className="relative hidden sm:block" title="Wishlist">
+                <Heart className="h-5 w-5" />
+                {wishlist.length > 0 && <span className="absolute -right-2 -top-2 grid h-4 w-4 place-items-center rounded-full bg-[#d97706] text-[10px]">{wishlist.length}</span>}
+              </Link>
+              <Link to="/cart" className="relative" title="Cart">
                 <ShoppingCart className="h-6 w-6" />
                 {cartItemCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  <span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-[#d97706] text-xs text-white">
                     {cartItemCount}
                   </span>
                 )}
               </Link>
-              <button className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+              <button className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)} aria-label="Toggle menu">
                 {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
               </button>
             </div>
           </div>
         </div>
-        
-        {/* Mobile menu */}
+
         {isMenuOpen && (
-          <div className="md:hidden bg-amuchi-darkgreen px-2 pt-2 pb-3 space-y-1">
-            <Link to="/" onClick={() => setIsMenuOpen(false)} className="block px-3 py-2 rounded-md hover:bg-amuchi-green">Home</Link>
-            <Link to="/products" onClick={() => setIsMenuOpen(false)} className="block px-3 py-2 rounded-md hover:bg-amuchi-green">Products</Link>
-            <Link to="/about" onClick={() => setIsMenuOpen(false)} className="block px-3 py-2 rounded-md hover:bg-amuchi-green">About</Link>
-            <Link to="/contact" onClick={() => setIsMenuOpen(false)} className="block px-3 py-2 rounded-md hover:bg-amuchi-green">Contact</Link>
+          <div className="space-y-1 bg-[#254729] px-4 py-4 md:hidden">
+            {navItems.map(([to, label]) => (
+              <Link key={to} to={to} onClick={() => setIsMenuOpen(false)} className="block rounded-lg px-3 py-3 font-semibold hover:bg-white/10">
+                {label}
+              </Link>
+            ))}
+            <a href="https://wa.me/919655493675" className="block rounded-lg px-3 py-3 font-semibold text-[#f4dfad]">
+              WhatsApp Order
+            </a>
           </div>
         )}
       </header>
@@ -55,14 +84,14 @@ const Layout = () => {
         <Outlet />
       </main>
 
-      <footer className="bg-amuchi-darkbrown text-amuchi-beige py-12">
-        <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8">
+      <footer className="bg-[#3b2a1f] py-12 text-[#f4dfad]">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 md:grid-cols-4">
           <div>
-            <h3 className="text-xl font-bold font-tamil mb-4">அமுச்சி Organic</h3>
-            <p className="text-sm">Bringing back traditional healthy mixes and authentic tastes to your home. No chemicals, 100% natural.</p>
+            <h3 className="mb-3 text-xl font-black">AMUCHI ORGANIC</h3>
+            <p className="font-tamil text-sm">பாரம்பரிய சத்து உணவுகளை உங்கள் வீட்டுக்கு நேரடியாக கொண்டு வருகிறோம்.</p>
           </div>
           <div>
-            <h4 className="text-lg font-semibold mb-4">Quick Links</h4>
+            <h4 className="mb-4 text-lg font-semibold">Quick Links</h4>
             <ul className="space-y-2 text-sm">
               <li><Link to="/products">Shop</Link></li>
               <li><Link to="/about">About Us</Link></li>
@@ -70,12 +99,16 @@ const Layout = () => {
             </ul>
           </div>
           <div>
-            <h4 className="text-lg font-semibold mb-4">Contact Us</h4>
-            <p className="text-sm">Phone: 9655493675 / 9047484721</p>
-            <p className="text-sm">FSSAI: 22425296000143</p>
+            <h4 className="mb-4 text-lg font-semibold">Contact Us</h4>
+            <p className="flex items-center gap-2 text-sm"><Phone className="h-4 w-4" /> 9655493675 / 9047484721</p>
+            <p className="mt-2 text-sm">FSSAI: 22425296000143</p>
+          </div>
+          <div>
+            <h4 className="mb-4 text-lg font-semibold">Admin</h4>
+            <Link to="/admin" className="text-sm underline-offset-4 hover:underline">Dashboard Login</Link>
           </div>
         </div>
-        <div className="text-center text-sm mt-8 pt-8 border-t border-gray-600">
+        <div className="mt-8 border-t border-white/15 pt-8 text-center text-sm">
           &copy; {new Date().getFullYear()} Amuchi Organic. All rights reserved.
         </div>
       </footer>
